@@ -219,7 +219,9 @@ export class AudioEngine {
       }
 
       if (track.pattern[patternIndex] === 1) {
-        const visualDelay = 2.0; // Reach strike point after exactly 2 seconds of visual movement
+        // Lock travel duration to exactly 6 beats of music so targets land precisely on the beat grid
+        const secondsPerBeat = 60.0 / track.bpm;
+        const visualDelay = 6.0 * secondsPerBeat;
         const targetTime = time + visualDelay;
 
         // Determine node placement gracefully to maximize tactile playing satisfaction
@@ -413,33 +415,88 @@ export class AudioEngine {
     if (!this.ctx || !this.primaryGain) return;
 
     const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    osc.type = 'sawtooth';
     
-    // Pitch differs by performance
-    if (result === 'perfect') {
-      osc.frequency.setValueAtTime(880, now); // high sparkling A5
-      osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15); // slide up
-      gain.gain.setValueAtTime(0.15, now);
-    } else if (result === 'great') {
-      osc.frequency.setValueAtTime(587.33, now); // D5
-      osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.15);
-      gain.gain.setValueAtTime(0.12, now);
-    } else {
-      osc.frequency.setValueAtTime(440, now); // A4
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.15);
-      gain.gain.setValueAtTime(0.08, now);
+    // 1. High tactile transient click (the "key-play clack" or wood/plastic contact attack)
+    const clickOsc = this.ctx.createOscillator();
+    const clickGain = this.ctx.createGain();
+    clickOsc.connect(clickGain);
+    clickGain.connect(this.primaryGain);
+
+    clickOsc.type = 'triangle'; // triangle wave gives a perfect solid acoustic contact feel
+    clickOsc.frequency.setValueAtTime(4500, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(150, now + 0.012); // extremely steep drop for snapping impact
+
+    clickGain.gain.setValueAtTime(0.06, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.012);
+
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.015);
+
+    // 2. Band-pass filtered sand/glass friction spark (very snappy physical rattle)
+    let frictionSrc: AudioBufferSourceNode | null = null;
+    let frictionGain: GainNode | null = null;
+    if (this.noiseBuffer) {
+      frictionSrc = this.ctx.createBufferSource();
+      frictionSrc.buffer = this.noiseBuffer;
+      const frictionFilter = this.ctx.createBiquadFilter();
+      frictionFilter.type = 'bandpass';
+      frictionFilter.frequency.setValueAtTime(4200, now);
+      frictionFilter.Q.setValueAtTime(4.0, now);
+      
+      frictionGain = this.ctx.createGain();
+      let clickNoiseLevel = 0.022;
+      if (result === 'perfect') clickNoiseLevel = 0.032;
+      else if (result === 'great') clickNoiseLevel = 0.022;
+      else clickNoiseLevel = 0.014;
+
+      frictionGain.gain.setValueAtTime(clickNoiseLevel, now);
+      frictionGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+      
+      frictionSrc.connect(frictionFilter);
+      frictionFilter.connect(frictionGain);
+      frictionGain.connect(this.primaryGain);
     }
 
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    // 3. Clear digital sine chime (provides the musical resolution accent)
+    const chimeOsc = this.ctx.createOscillator();
+    const chimeGain = this.ctx.createGain();
+    chimeOsc.connect(chimeGain);
+    chimeGain.connect(this.primaryGain);
 
-    osc.start(now);
-    osc.stop(now + 0.16);
+    chimeOsc.type = 'sine';
+    
+    const duration = 0.06; // extremely compact
+    let freqStart = 900;
+    let freqEnd = 600;
+    let chimeVol = 0.02;
+
+    if (result === 'perfect') {
+      freqStart = 1500;
+      freqEnd = 1200;
+      chimeVol = 0.045;
+    } else if (result === 'great') {
+      freqStart = 1200;
+      freqEnd = 900;
+      chimeVol = 0.032;
+    } else {
+      freqStart = 900;
+      freqEnd = 600;
+      chimeVol = 0.02;
+    }
+
+    chimeOsc.frequency.setValueAtTime(freqStart, now);
+    chimeOsc.frequency.exponentialRampToValueAtTime(freqEnd, now + duration);
+
+    chimeGain.gain.setValueAtTime(chimeVol, now);
+    chimeGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    chimeOsc.start(now);
+    chimeOsc.stop(now + duration + 0.01);
+    
+    if (frictionSrc && frictionGain) {
+      frictionSrc.start(now);
+      frictionSrc.stop(now + 0.025);
+    }
   }
 
   public playMissSound() {
@@ -452,16 +509,16 @@ export class AudioEngine {
     osc.connect(gain);
     gain.connect(this.primaryGain);
 
-    // Discordant, sliding sound for missing beats (record-scratch effect)
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.linearRampToValueAtTime(80, now + 0.25);
+    // Smooth record scratch slide (triangle instead of screeching sawtooth)
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.linearRampToValueAtTime(50, now + 0.18);
 
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    gain.gain.setValueAtTime(0.05, now); // reduced down from 0.15
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
     osc.start(now);
-    osc.stop(now + 0.26);
+    osc.stop(now + 0.19);
   }
 
   public playSlashSfx(side: Side) {

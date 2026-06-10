@@ -33,6 +33,8 @@ interface ClubStageProps {
   isPaused: boolean;
   onGameOver: () => void;
   onGameClear: () => void;
+  isInvincible: boolean;
+  playMissSound: boolean;
 }
 
 export const ClubStage: React.FC<ClubStageProps> = ({
@@ -43,6 +45,8 @@ export const ClubStage: React.FC<ClubStageProps> = ({
   isPaused,
   onGameOver,
   onGameClear,
+  isInvincible,
+  playMissSound,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -607,9 +611,10 @@ export const ClubStage: React.FC<ClubStageProps> = ({
       for (let i = enemies.length - 1; i >= 0; i--) {
         const e = enemies[i];
 
-        // Travel duration is exactly 2.0s. Compute progress based precisely on targetTime so that
+        // Travel duration is exactly 6 beats of music. Compute progress based precisely on targetTime so that
         // progress is 1.0 when now === targetTime.
-        const totalDuration = 2.0;
+        const secondsPerBeat = 60.0 / track.bpm;
+        const totalDuration = 6.0 * secondsPerBeat;
         const progress = 1.0 - (e.targetTime - now) / totalDuration;
 
         // Evaluate PAST MISS threshold (if player let it slide past and missed completely)
@@ -622,7 +627,9 @@ export const ClubStage: React.FC<ClubStageProps> = ({
             playerStateRef.current = 'hit';
             playerActionTimerRef.current = 12; // visual damage bounce
 
-            audioEngine.playMissSound();
+            if (playMissSound) {
+              audioEngine.playMissSound();
+            }
 
             // Display floating MISS
             const hitX = e.side === 'left' ? leftGateX : rightGateX;
@@ -655,7 +662,7 @@ export const ClubStage: React.FC<ClubStageProps> = ({
             setTimeout(() => {
               let isDead = false;
               setStats((prev) => {
-                const nextHealth = Math.max(0, prev.health - 10);
+                const nextHealth = isInvincible ? prev.health : Math.max(0, prev.health - 10);
                 if (nextHealth <= 0) {
                   isDead = true;
                 }

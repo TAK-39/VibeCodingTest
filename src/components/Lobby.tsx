@@ -10,14 +10,26 @@ import {
   Trophy, 
   ChevronRight, 
   Flame,
-  Music4
+  Music4,
+  Shield,
+  VolumeX
 } from 'lucide-react';
 
 interface LobbyProps {
   onStartTrack: (track: Track) => void;
+  isInvincible: boolean;
+  setIsInvincible: (val: boolean) => void;
+  playMissSound: boolean;
+  setPlayMissSound: (val: boolean) => void;
 }
 
-export const Lobby: React.FC<LobbyProps> = ({ onStartTrack }) => {
+export const Lobby: React.FC<LobbyProps> = ({ 
+  onStartTrack,
+  isInvincible,
+  setIsInvincible,
+  playMissSound,
+  setPlayMissSound
+}) => {
   const [selectedTrack, setSelectedTrack] = useState<Track>(TRACKS[0]);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [maxCombos, setMaxCombos] = useState<Record<string, number>>({});
@@ -184,6 +196,55 @@ export const Lobby: React.FC<LobbyProps> = ({ onStartTrack }) => {
                     }}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* GAME CUSTOMIZATION OPTIONS */}
+            <div className="p-3 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col gap-2">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-400 block text-left">
+                STAGE SETTINGS / オプション設定
+              </span>
+              
+              <div className="grid grid-cols-2 gap-2">
+                {/* 1. Invincibility Toggle */}
+                <button
+                  onClick={() => setIsInvincible(!isInvincible)}
+                  style={{
+                    borderColor: isInvincible ? `${selectedTrack.color}77` : 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: isInvincible ? `${selectedTrack.color}15` : 'transparent',
+                  }}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 group"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Shield className={`w-3.5 h-3.5 ${isInvincible ? 'animate-pulse' : ''}`} style={{ color: isInvincible ? selectedTrack.color : '#94a3b8' }} />
+                    <span className="text-[10px] font-bold tracking-wider text-gray-300 group-hover:text-white">無敵モード</span>
+                  </div>
+                  <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded ${isInvincible ? 'bg-pink-500/20 text-pink-300 font-bold' : 'bg-white/5 text-gray-400'}`}>
+                    {isInvincible ? 'ACTIVE / ON' : 'OFF'}
+                  </span>
+                </button>
+
+                {/* 2. Miss Sound Toggle */}
+                <button
+                  onClick={() => setPlayMissSound(!playMissSound)}
+                  style={{
+                    borderColor: playMissSound ? `${selectedTrack.accentColor}77` : 'rgba(255, 255, 255, 0.05)',
+                    backgroundColor: playMissSound ? `${selectedTrack.accentColor}15` : 'transparent',
+                  }}
+                  className="flex flex-col items-center justify-center p-2 rounded-xl border transition-all cursor-pointer active:scale-95 group"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {playMissSound ? (
+                      <Volume2 className="w-3.5 h-3.5" style={{ color: selectedTrack.accentColor }} />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5 text-gray-500" />
+                    )}
+                    <span className="text-[10px] font-bold tracking-wider text-gray-300 group-hover:text-white">ミス警告音</span>
+                  </div>
+                  <span className={`text-[9px] font-mono mt-1 px-1.5 py-0.5 rounded ${playMissSound ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'bg-white/5 text-gray-500'}`}>
+                    {playMissSound ? 'ON (SOUND)' : 'OFF (MUTED)'}
+                  </span>
+                </button>
               </div>
             </div>
 

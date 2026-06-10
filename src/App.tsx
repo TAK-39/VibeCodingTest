@@ -29,6 +29,10 @@ export default function App() {
   const [selectedTrack, setSelectedTrack] = useState<Track>(TRACKS[0]);
   const [stats, setStats] = useState<GameStats>(INITIAL_STATS);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Options for gameplay customization
+  const [isInvincible, setIsInvincible] = useState(false);
+  const [playMissSound, setPlayMissSound] = useState(true);
 
   // High quality Web Audio context lifecycle
   const audioEngineRef = useRef<AudioEngine | null>(null);
@@ -107,7 +111,13 @@ export default function App() {
       
       {/* 1. LOBBY / SELECTION SCENE */}
       {scene === 'lobby' && (
-        <Lobby onStartTrack={handleStartTrack} />
+        <Lobby 
+          onStartTrack={handleStartTrack} 
+          isInvincible={isInvincible}
+          setIsInvincible={setIsInvincible}
+          playMissSound={playMissSound}
+          setPlayMissSound={setPlayMissSound}
+        />
       )}
 
       {/* 2. PLAYING SCENE AND LIVE GRID */}
@@ -131,6 +141,8 @@ export default function App() {
             isPaused={isPaused}
             onGameOver={handleGameOver}
             onGameClear={handleGameClear}
+            isInvincible={isInvincible}
+            playMissSound={playMissSound}
           />
 
           {/* Pause overlay */}
