@@ -1,0 +1,6 @@
+{
+  "name": "Rhythm Club Action",
+  "description": "タイミングよくボタンを切って敵を倒すリズムアクションゲーム！ネオンやレーザーが煌めくクラブステージで電子ミュージックに合わせて爽快な演奏バトルを楽しもう。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
